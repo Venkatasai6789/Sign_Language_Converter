@@ -7,3 +7,7 @@ regex==2022.10.31
 sqlparse>=0.4.4
 tqdm==4.64.1
 setuptools==67.8.0
+python-pptx==0.6.23
+google-genai>=1.0.0
+Pillow>=10.0.0
+python-dotenv

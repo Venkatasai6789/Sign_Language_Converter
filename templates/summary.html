@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Summary & Convert{% endblock %}
+{% block page_subtitle %}{{ upload.title }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-12rem)] min-h-[600px]">
+    <!-- Left Column: Summary Content -->
+    <div class="lg:col-span-1 flex flex-col gap-6 h-full overflow-hidden">
+        <!-- Stats Card -->
+        <div class="glass-panel p-5 rounded-2xl flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div
+                    class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                    <span class="material-icons-round">analytics</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider truncate">Word Count</p>
+                    <p class="text-xl font-bold text-white truncate"
+                        title="{{ upload.extracted_text|wordcount }} Words">{{ upload.extracted_text|wordcount }} Words
+                    </p>
+                </div>
+            </div>
+            <div class="h-8 w-[1px] bg-white/10 mx-2"></div>
+            <div class="min-w-0 flex-1 text-right">
+                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider truncate">Est. Time</p>
+                <p class="text-xl font-bold text-white truncate">~{{
+                    upload.extracted_text|wordcount|divisibleby:150|add:1 }} min</p>
+            </div>
+        </div>
+
+        <!-- Summary Text Area -->
+        <div class="glass-panel p-6 rounded-2xl flex-1 flex flex-col overflow-hidden relative group">
+            <div class="flex items-center justify-between mb-4 shrink-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="material-icons-round text-primary">summarize</span>
+                    AI Summary
+                </h3>
+                <button class="text-xs bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded transition-colors"
+                    title="Copy Text">
+                    <span class="material-icons-round text-sm">content_copy</span>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto custom-scrollbar flex-1 pr-2">
+                <p class="text-slate-300 leading-relaxed text-sm">
+                    {{ upload.summary_text|linebreaksbr }}
+                </p>
+            </div>
+
+            <!-- Fade out effect at bottom -->
+            <div
+                class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#16182e] to-transparent pointer-events-none rounded-b-2xl">
+            </div>
+        </div>
+
+        <!-- Extracted Text Area (Collapsed or secondary) -->
+        <div class="glass-panel p-4 rounded-xl shrink-0 cursor-pointer hover:bg-white/5 transition-colors group">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-slate-400 group-hover:text-white transition-colors">View Original
+                    Extracted Text</span>
+                <span class="material-icons-round text-slate-500 group-hover:text-white">expand_more</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Video Player & Animation -->
+    <div class="lg:col-span-2 flex flex-col h-full gap-6">
+        <!-- Main Video Player Stage -->
+        <div id="video-container" class="glass-panel rounded-3xl flex-1 relative overflow-hidden flex flex-col group">
+            <!-- Header Toolbar -->
+            <div class="h-16 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-white/[0.02]">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-2 text-sm font-medium text-white">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Ready to Play
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 relative">
+                    <button id="settings-btn"
+                        class="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons-round">settings</span>
+                    </button>
+                    <!-- Settings Menu -->
+                    <div id="settings-menu"
+                        class="absolute top-12 right-0 bg-[#1e2336] border border-white/10 rounded-lg shadow-xl overflow-hidden hidden min-w-[150px] z-50">
+                        <div class="p-3 border-b border-white/5">
+                            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Playback Speed</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="changeSpeed(0.5)"
+                                    class="speed-opt px-2 py-1 text-xs rounded hover:bg-white/10 text-slate-300 transition-colors"
+                                    data-speed="0.5">0.5x</button>
+                                <button onclick="changeSpeed(1.0)"
+                                    class="speed-opt px-2 py-1 text-xs rounded bg-primary text-white transition-colors"
+                                    data-speed="1.0">1.0x</button>
+                                <button onclick="changeSpeed(1.5)"
+                                    class="speed-opt px-2 py-1 text-xs rounded hover:bg-white/10 text-slate-300 transition-colors"
+                                    data-speed="1.5">1.5x</button>
+                                <button onclick="changeSpeed(2.0)"
+                                    class="speed-opt px-2 py-1 text-xs rounded hover:bg-white/10 text-slate-300 transition-colors"
+                                    data-speed="2.0">2.0x</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="fullscreen-btn"
+                        class="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons-round" id="fullscreen-icon">fullscreen</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Avatar / Animation Placeholder -->
+            <div class="flex-1 bg-[#0f111a] relative flex items-center justify-center p-8">
+                <!-- Grid Background -->
+                <div class="absolute inset-0 opacity-20"
+                    style="background-image: linear-gradient(#2d3748 1px, transparent 1px), linear-gradient(90deg, #2d3748 1px, transparent 1px); background-size: 40px 40px;">
+                </div>
+
+                <!-- Main Video Element -->
+                <div class="relative z-10 text-center w-full h-full flex flex-col items-center justify-center">
+                    <div class="relative w-full max-w-lg aspect-video mx-auto mb-4">
+                        <!-- Loading / Poster State -->
+                        <div id="video-placeholder"
+                            class="absolute inset-0 flex items-center justify-center transition-opacity duration-500">
+                            <div class="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+                            <img src="{% static 'mic3.png' %}" alt="AI Avatar"
+                                class="w-full h-full object-contain opacity-80" onerror="this.style.display='none'">
+                            <p class="absolute bottom-4 text-slate-400 text-sm">AI Avatar is ready to sign.</p>
+                        </div>
+
+                        <!-- Video Player -->
+                        <video id="sign-video" class="w-full h-full object-contain hidden" playsinline>
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+
+                    <!-- Current Word Display -->
+                    <div id="current-word-display"
+                        class="h-8 text-2xl font-bold text-white tracking-widest transition-all duration-300 opacity-0 transform translate-y-4">
+                        <!-- Loaded via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playback Controls -->
+            <div class="h-24 border-t border-white/5 bg-white/[0.02] px-8 flex items-center gap-6 shrink-0">
+                <button id="play-btn"
+                    class="w-12 h-12 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center shadow-lg hover:scale-105 transition-all">
+                    <span class="material-icons-round text-2xl ml-1" id="play-icon">play_arrow</span>
+                </button>
+
+                <div class="flex-1">
+                    <div class="flex justify-between text-xs text-slate-400 mb-2">
+                        <span id="current-time">0 / 0</span>
+                        <span id="total-time">words</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="h-1.5 bg-white/10 rounded-full overflow-hidden cursor-pointer group"
+                        id="progress-container">
+                        <div id="progress-bar"
+                            class="h-full bg-primary w-[0%] relative group-hover:bg-indigo-400 transition-all duration-300 ease-linear">
+                            <div
+                                class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                        <span>Start</span>
+                        <span id="progress-text">0 / 0 words</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Volume Control -->
+                    <div class="flex items-center gap-2 group relative">
+                        <button class="text-slate-400 hover:text-white transition-colors" onclick="toggleMute()">
+                            <span class="material-icons-round" id="volume-icon">volume_up</span>
+                        </button>
+                        <input type="range" min="0" max="1" step="0.1" value="1" id="volume-slider"
+                            class="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'dashboard' %}"
+                class="px-6 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-white font-medium transition-colors">
+                Back to Dashboard
+            </a>
+            <a href="{% url 'quiz' upload.id %}"
+                class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:shadow-lg hover:shadow-primary/25 text-white font-medium transition-all flex items-center gap-2">
+                <span class="material-icons-round">quiz</span>
+                Take Quiz
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Data for JS -->
+{{ words|json_script:"sign-data" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const words = JSON.parse(document.getElementById('sign-data').textContent);
+        const video = document.getElementById('sign-video');
+        const placeholder = document.getElementById('video-placeholder');
+        const playBtn = document.getElementById('play-btn');
+        const playIcon = document.getElementById('play-icon');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const wordDisplay = document.getElementById('current-word-display');
+
+        let currentIndex = 0;
+        let isPlaying = false;
+
+        // Initialize UI
+        progressText.textContent = `0 / ${words.length} words`;
+
+        function updateProgress() {
+            const percent = ((currentIndex) / words.length) * 100;
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${currentIndex + 1} / ${words.length} words`;
+            document.getElementById('current-time').textContent = currentIndex + 1;
+            document.getElementById('total-time').textContent = "/ " + words.length;
+        }
+
+        function playNext() {
+            if (currentIndex >= words.length) {
+                // Finished
+                isPlaying = false;
+                playIcon.textContent = 'replay';
+                currentIndex = 0;
+                wordDisplay.classList.remove('opacity-100', 'translate-y-0');
+                wordDisplay.classList.add('opacity-0', 'translate-y-4');
+                // Show placeholder again after a delay? Or keep last frame?
+                // Let's keep last frame but button resets
+                return;
+            }
+
+            const word = words[currentIndex];
+
+            // Validate word to prevent bad paths
+            if (!word) {
+                currentIndex++;
+                playNext();
+                return;
+            }
+
+            const videoPath = `/static/${word}.mp4`;
+
+            video.src = videoPath;
+
+            // Enforce speed on metadata load
+            video.onloadeddata = function () {
+                video.playbackRate = currentSpeed;
+            };
+
+            // Speak the word (TTS)
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+            if (!video.muted) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.rate = currentSpeed;
+                utterance.volume = video.volume;
+                speechSynthesis.speak(utterance);
+            }
+
+            video.play().catch(e => {
+                console.error("Error playing video for:", word, e);
+                // Skip if error
+                currentIndex++;
+                playNext();
+            });
+
+            // Update Text Display
+            wordDisplay.textContent = word;
+            wordDisplay.classList.remove('opacity-0', 'translate-y-4');
+            wordDisplay.classList.add('opacity-100', 'translate-y-0');
+
+            updateProgress();
+        }
+
+        video.onended = function () {
+            currentIndex++;
+            playNext();
+        };
+
+        video.onerror = function () {
+            console.warn("Video load error, skipping:", words[currentIndex]);
+            currentIndex++;
+            playNext();
+        };
+
+        playBtn.addEventListener('click', function () {
+            if (isPlaying) {
+                // Pause logic (not fully implemented as we chain videos, intricate to pause mid-chain effectively without logic state)
+                // For simplicity, this acts as Restart/Play
+                // Or we can implement partial pause. 
+                // Let's make it a Play/Replay button for now to ensure "Complete Length"
+                video.pause();
+                isPlaying = false;
+                playIcon.textContent = 'play_arrow';
+            } else {
+                // Start Playing
+                isPlaying = true;
+                playIcon.textContent = 'pause';
+                placeholder.classList.add('hidden');
+                video.classList.remove('hidden');
+
+                // If at start
+                if (currentIndex === 0 || currentIndex >= words.length) {
+                    currentIndex = 0;
+                    playNext();
+                } else {
+                    video.play();
+                }
+            }
+        });
+
+        // Click to Seek
+        document.getElementById('progress-container').addEventListener('click', function (e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const width = rect.width;
+            const pct = Math.max(0, Math.min(1, x / width));
+
+            currentIndex = Math.floor(pct * words.length);
+            // If playing, restart at new index
+            if (isPlaying) {
+                playNext();
+            } else {
+                updateProgress();
+            }
+        });
+    });
+
+    let currentSpeed = 1.0;
+
+    function toggleMute() {
+        const v = document.getElementById('sign-video');
+        const icon = document.getElementById('volume-icon');
+        v.muted = !v.muted;
+        icon.textContent = v.muted ? 'volume_off' : (v.volume < 0.5 ? 'volume_down' : 'volume_up');
+    }
+
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fullscreen Logic
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const container = document.getElementById('video-container');
+        const fullscreenIcon = document.getElementById('fullscreen-icon');
+
+        if (fullscreenBtn && container) {
+            fullscreenBtn.addEventListener('click', function () {
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            document.addEventListener('fullscreenchange', function () {
+                if (document.fullscreenElement) {
+                    if (fullscreenIcon) fullscreenIcon.textContent = 'fullscreen_exit';
+                    container.classList.remove('rounded-3xl'); // Remove rounding in fullscreen
+                } else {
+                    if (fullscreenIcon) fullscreenIcon.textContent = 'fullscreen';
+                    container.classList.add('rounded-3xl');
+                }
+            });
+        }
+
+        // Settings Menu Logic
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsMenu = document.getElementById('settings-menu');
+
+        if (settingsBtn && settingsMenu) {
+            settingsBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                settingsMenu.classList.toggle('hidden');
+            });
+
+            // Close settings when clicking outside
+            document.addEventListener('click', function (e) {
+                if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+                    settingsMenu.classList.add('hidden');
+                }
+            });
+        }
+    });
+
+    function changeSpeed(speed) {
+        currentSpeed = speed;
+        // Update UI
+        document.querySelectorAll('.speed-opt').forEach(btn => {
+            const btnSpeed = parseFloat(btn.getAttribute('data-speed'));
+            if (btnSpeed === speed) {
+                btn.classList.add('bg-primary', 'text-white');
+                btn.classList.remove('text-slate-300', 'hover:bg-white/10');
+            } else {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('text-slate-300', 'hover:bg-white/10');
+            }
+        });
+
+        // Loop through all videos or set global speed
+        const v = document.getElementById('sign-video');
+        if (v) {
+            v.playbackRate = speed;
+            v.defaultPlaybackRate = speed;
+        }
+    }
+
+    // Volume Slider
+    document.getElementById('volume-slider').addEventListener('input', function (e) {
+        const v = document.getElementById('sign-video');
+        v.volume = e.target.value;
+        v.muted = false;
+
+        const icon = document.getElementById('volume-icon');
+        if (v.volume === 0) icon.textContent = 'volume_mute';
+        else if (v.volume < 0.5) icon.textContent = 'volume_down';
+        else icon.textContent = 'volume_up';
+    });
+
+</script>
+{% endblock %}
