@@ -8,6 +8,7 @@ urlpatterns = [
     path('quiz/<int:session_id>/', views.quiz_view, name='quiz'),
     path('quiz/<int:session_id>/api/', views.quiz_data_api, name='quiz_data_api'),
     path('quiz/<int:session_id>/results/', views.quiz_submit_view, name='quiz_results'),
+    path('quiz/<int:session_id>/save-result/', views.quiz_save_result, name='quiz_save_result'),
     path('live-converter/', views.animation_view, name='animation'),
     path('history/', views.history_view, name='history'),
 ]

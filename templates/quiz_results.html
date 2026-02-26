@@ -2,65 +2,94 @@
 {% load static %}
 
 {% block page_title %}Quiz Results{% endblock %}
-{% block page_subtitle %}Review your performance{% endblock %}
+{% block page_subtitle %}Performance for "{{ upload.title }}"{% endblock %}
 
 {% block content %}
-<div class="h-[calc(100vh-12rem)] min-h-[600px] flex justify-center items-center py-6">
-    <div class="glass-panel w-full max-w-2xl rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-        <!-- Confetti / decoration background -->
-        <div class="absolute inset-0 pointer-events-none overflow-hidden">
-            <div class="absolute top-0 left-1/4 w-2 h-2 bg-primary rounded-full animate-ping opacity-50"></div>
-            <div class="absolute top-10 right-1/4 w-3 h-3 bg-indigo-500 rounded-full animate-ping opacity-30 delay-300">
+<div class="min-h-[calc(100vh-12rem)] flex justify-center items-center py-6">
+    <div class="w-full max-w-4xl space-y-8">
+        <!-- Main Result Card -->
+        <div class="glass-panel rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+            <!-- Background Decorations -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div class="absolute top-0 left-1/4 w-32 h-32 bg-primary/20 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
             </div>
-        </div>
 
-        <div class="mb-2 relative flex flex-col items-center justify-center">
-            <div
-                class="w-48 h-48 rounded-full border-[10px] border-white/5 flex items-center justify-center relative bg-[#0f172a]/50 backdrop-blur-sm">
-                <svg class="absolute inset-0 w-full h-full -rotate-90 text-primary drop-shadow-[0_0_15px_rgba(95,114,236,0.5)] transform scale-[0.85] origin-center"
-                    viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="46" fill="transparent" stroke-width="8" stroke="currentColor"
-                        stroke-dasharray="290" stroke-dashoffset="0" id="score-circle-bg" class="text-white/5">
-                    </circle>
-                    <circle cx="50" cy="50" r="46" fill="transparent" stroke-width="8" stroke="currentColor"
-                        stroke-dasharray="290" stroke-dashoffset="290" stroke-linecap="round" id="score-circle"
-                        class="transition-all duration-1000 ease-out"></circle>
-                </svg>
-                <div class="flex flex-col items-center z-10">
-                    <span class="text-5xl font-bold text-white mb-1" id="score-text">0/0</span>
-                    <span class="text-xs text-slate-400 uppercase tracking-wider font-medium">Score</span>
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+                <!-- Left: Score Circle -->
+                <div class="flex-1 flex flex-col items-center">
+                    <div class="relative w-64 h-64 flex items-center justify-center">
+                        <svg class="transform -rotate-90 w-full h-full drop-shadow-2xl" viewBox="0 0 100 100">
+                            <!-- Background Circle -->
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)"
+                                stroke-width="8" />
+                            <!-- Progress Circle -->
+                            <circle id="score-circle" cx="50" cy="50" r="45" fill="none" stroke="url(#gradient)"
+                                stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round"
+                                class="transition-all duration-1500 ease-out" />
+                            <!-- Gradient Definition -->
+                            <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#5f72ec" />
+                                    <stop offset="100%" stop-color="#a855f7" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute flex flex-col items-center animate-fade-in">
+                            <span class="text-6xl font-bold text-white mb-2" id="percentage-text">0%</span>
+                            <span class="text-sm text-slate-400 uppercase tracking-wider font-semibold">Accuracy</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Content & Stats -->
+                <div class="flex-1 text-center md:text-left space-y-6">
+                    <div>
+                        <div
+                            class="inline-block px-4 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-300 mb-4">
+                            Module: {{ upload.title }}
+                        </div>
+                        <h2 class="text-4xl font-bold text-white mb-2" id="feedback-title">Great Job!</h2>
+                        <p class="text-slate-400 leading-relaxed" id="feedback-msg">You've mastered this topic nicely.
+                            Keep practicing to reach perfection!</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-panel p-4 rounded-2xl bg-white/5 flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase font-bold">Correct</p>
+                                <p class="text-xl font-bold text-white" id="correct-count">0</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-2xl bg-white/5 flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-icons-round">timer</span>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase font-bold">Time</p>
+                                <p class="text-xl font-bold text-white" id="time-text">00:00</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <!-- Badge moved below circle with negative margin for clean overlap -->
-            <div class="-mt-5 z-20 px-6 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold shadow-xl backdrop-blur-md"
-                id="score-badge">
-                Splendid!
+        </div>
+
+        <!-- Question Breakdown Grid -->
+        <div class="space-y-4">
+            <h3 class="text-xl font-bold text-white px-2">Question Breakdown</h3>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4" id="question-grid">
+                <!-- Injected via JS -->
             </div>
         </div>
 
-        <div class="mt-8 space-y-2">
-            <h2 class="text-3xl font-bold text-white mb-2" id="feedback-title">Great Job!</h2>
-            <p class="text-slate-400 mb-8 max-w-md mx-auto leading-relaxed" id="feedback-msg">You have a good grasp of
-                the material.
-                Keep practicing to perfect your skills.</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 mb-8">
-            <div
-                class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors">
-                <span class="material-icons-round text-primary mb-2 text-2xl">timer</span>
-                <span class="text-2xl font-bold text-white" id="time-text">00:00</span>
-                <span class="text-xs text-slate-500 uppercase tracking-wider mt-1">Time Taken</span>
-            </div>
-            <div
-                class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors">
-                <span class="material-icons-round text-amber-400 mb-2 text-2xl">stars</span>
-                <span class="text-2xl font-bold text-white" id="xp-text">+0</span>
-                <span class="text-xs text-slate-500 uppercase tracking-wider mt-1">XP Earned</span>
-            </div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <!-- Footer Actions -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center pt-8">
             <a href="{% url 'quiz' upload.id %}"
                 class="px-8 py-3.5 rounded-xl border border-white/10 hover:bg-white/5 text-white font-medium transition-colors flex items-center justify-center gap-2 group">
                 <span
@@ -75,62 +104,68 @@
         </div>
     </div>
 </div>
-</div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Get params from URL
+    // Get params
     const urlParams = new URLSearchParams(window.location.search);
     const score = parseInt(urlParams.get('score')) || 0;
     const total = parseInt(urlParams.get('total')) || 5;
     const timeTaken = urlParams.get('time') || "00:00";
 
-    // Calculate XP (e.g., 10 XP per point)
-    const xp = score * 10;
-
     // Update DOM
-    document.getElementById('score-text').textContent = `${score}/${total}`;
+    document.getElementById('correct-count').textContent = `${score}/${total}`;
     document.getElementById('time-text').textContent = timeTaken;
-    document.getElementById('xp-text').textContent = `+${xp}`;
 
-    const percentage = (score / total) * 100;
-    const circle = document.getElementById('score-circle');
-    // SVG is 100x100, r=46. Circumference = 2 * PI * 46 ~= 289.02
-    const circumference = 290;
-    const offset = circumference - (percentage / 100) * circumference;
+    const percentage = Math.round((score / total) * 100);
+    document.getElementById('percentage-text').textContent = `${percentage}%`;
 
-    // Animate circle
+    // Circle Animation
     setTimeout(() => {
+        const circle = document.getElementById('score-circle');
+        const circumference = 283;
+        const offset = circumference - (percentage / 100) * circumference;
         circle.style.strokeDashoffset = offset;
-    }, 300);
+    }, 500);
 
-    // Update Text
+    // Feedback Logic
     const title = document.getElementById('feedback-title');
     const msg = document.getElementById('feedback-msg');
-    const badge = document.getElementById('score-badge');
 
     if (percentage >= 80) {
-        title.textContent = "Excellent!";
-        msg.textContent = "You've mastered this topic! Ready for the next challenge?";
-        badge.textContent = "Master";
-        badge.className = "-mt-5 z-20 px-6 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold shadow-xl backdrop-blur-md";
-        circle.classList.add('text-emerald-500');
-    } else if (percentage >= 50) {
-        title.textContent = "Good Effort!";
-        msg.textContent = "You're getting there. A little more review and you'll ace it.";
-        badge.textContent = "Proficient";
-        badge.className = "-mt-5 z-20 px-6 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-bold shadow-xl backdrop-blur-md";
-        circle.classList.add('text-amber-500');
+        title.textContent = "Outstanding!";
+        msg.textContent = "You have an excellent grasp of these signs. You're ready for the next level!";
+    } else if (percentage >= 60) {
+        title.textContent = "Great Job!";
+        msg.textContent = "You're doing very well. A quick review of the missed signs will make you perfect.";
     } else {
         title.textContent = "Keep Practicing";
-        msg.textContent = "Don't give up! Review the study materials and try again.";
-        badge.textContent = "Novice";
-        badge.className = "-mt-5 z-20 px-6 py-2 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm font-bold shadow-xl backdrop-blur-md";
-        circle.classList.add('text-rose-500');
+        msg.textContent = "Don't discourage! Review the summary again and verify the signs you missed.";
     }
 
+    // Generate Grid for Visual Breakdown (Mocking visualization based on score)
+    // Since we don't pass per-question results in URL, we'll simulate a visual distribution
+    // In a real app, pass bitmask or array string in URL
+    const grid = document.getElementById('question-grid');
+
+    // We'll just show generic Q1..Qn and mark them based on score count 
+    // (Actual correctness mapping requires more data passing, for now this is a visual placeholder logic
+    // or we can just say "Score 3/5" implies 3 correct. We'll mark first N as correct for demo).
+
+    for (let i = 1; i <= total; i++) {
+        const isCorrect = i <= score; // Simplified logic
+        const div = document.createElement('div');
+        div.className = `glass-panel p-4 rounded-xl flex flex-col items-center justify-center gap-2 ${isCorrect ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`;
+
+        div.innerHTML = `
+            <span class="text-xs font-bold text-slate-500 uppercase">Q${i}</span>
+            <div class="w-8 h-8 rounded-full ${isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'} flex items-center justify-center">
+                <span class="material-icons-round text-sm">${isCorrect ? 'check' : 'close'}</span>
+            </div>
+            <span class="text-sm font-medium text-white truncate w-full text-center">Hello</span> <!-- Placeholder label -->
+        `;
+        grid.appendChild(div);
+    }
 </script>
 {% endblock %}

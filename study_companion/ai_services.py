@@ -34,27 +34,69 @@ def get_gemini_client():
 def summarize_text(text):
     """
     Summarizes the given text using Google Gemini 2.5 Flash.
+    Returns a JSON string with structured data.
     """
     client = get_gemini_client()
     if not client:
-        return "AI Summarization unavailable: API Key missing."
+        return json.dumps({
+            "summary": "AI Summarization unavailable: API Key missing.",
+            "key_concepts": [],
+            "important_terms": []
+        })
+
+    # JSON schema for the response
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "summary": {"type": "STRING"},
+            "key_concepts": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "title": {"type": "STRING"},
+                        "description": {"type": "STRING"},
+                        "color": {"type": "STRING", "enum": ["green", "blue", "purple"]}
+                    },
+                    "required": ["title", "description", "color"]
+                }
+            },
+            "important_terms": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"}
+            }
+        },
+        "required": ["summary", "key_concepts", "important_terms"]
+    }
 
     prompt = f"""
-    Summarize the following presentation content into clear, concise bullet points.
-    Make it suitable for learning notes.
+    Analyze the following presentation content and provide a structured learning summary.
+    
+    1. **summary**: A concise executive summary paragraph (approx 3-5 sentences) suitable for a quick overview.
+    2. **key_concepts**: Extract 3-5 key concepts. For each, provide a short 'title', a 'description', and assign a 'color' (green, blue, or purple) based on category/importance.
+    3. **important_terms**: List specific nouns/verbs that are crucial for sign language practice.
     
     Content:
-    {text[:10000]}  # Limit context if necessary, though 2.5 Flash has large context
+    {text[:10000]}
     """
     
     try:
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type='application/json',
+                response_schema=schema
+            )
         )
         return response.text
     except Exception as e:
-        return f"Error generating summary: {str(e)}"
+        print(f"Summary Generation Error: {e}")
+        return json.dumps({
+            "summary": f"Error generating summary: {str(e)}",
+            "key_concepts": [],
+            "important_terms": []
+        })
 
 def generate_mcq(text, num_questions=5, difficulty='Medium'):
     """

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import PPTUpload
 from .ai_services import extract_ppt_text, summarize_text, generate_mcq
-from .ai_services import extract_ppt_text, summarize_text, generate_mcq
+
 import json
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -14,8 +14,32 @@ from django.contrib.staticfiles import finders
 
 @login_required(login_url="login")
 def dashboard_view(request):
+    from .models import PPTUpload, UserProfile, QuizResult
+    from django.db.models import Sum
+    
     uploads = PPTUpload.objects.filter(user=request.user).order_by('-uploaded_at')
-    return render(request, 'dashboard.html', {'uploads': uploads})
+    
+    # Get or create profile (handling existing users who might not have one yet)
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    # Calculate Vocab Mastery (avg quiz accuracy)
+    results = QuizResult.objects.filter(user=request.user)
+    total_score = results.aggregate(Sum('score'))['score__sum'] or 0
+    total_possible = results.aggregate(Sum('total'))['total__sum'] or 0
+    
+    vocab_mastery = 0
+    if total_possible > 0:
+        vocab_mastery = int((total_score / total_possible) * 100)
+        
+    context = {
+        'uploads': uploads,
+        'streak': profile.current_streak,
+        'xp': profile.total_xp,
+        'vocab_mastery': vocab_mastery,
+        'quiz_count': results.count()
+    }
+    
+    return render(request, 'dashboard.html', context)
 
 @login_required(login_url="login")
 def upload_ppt_view(request):
@@ -53,16 +77,36 @@ def upload_ppt_view(request):
 def summary_view(request, session_id):
     upload = get_object_or_404(PPTUpload, id=session_id, user=request.user)
     
-    
     # Process summary for sign language
     from .ai_services import process_text_for_sign_language
+    
+    # Try to parse summary as JSON (new format), else fallback to text (legacy)
     try:
-        sign_words = process_text_for_sign_language(upload.summary_text)
+        summary_data = json.loads(upload.summary_text)
+        if not isinstance(summary_data, dict):
+            raise ValueError("Not a dictionary")
+        summary_text_content = summary_data.get('summary', '')
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Legacy: summary_text is just the string
+        summary_text_content = upload.summary_text or ""
+        summary_data = {
+            "summary": summary_text_content,
+            "key_concepts": [],
+            "important_terms": []
+        }
+        
+    try:
+        # Use the actual summary text for sign language generation
+        sign_words = process_text_for_sign_language(summary_text_content)
     except Exception as e:
         print(f"Error generating sign language: {e}")
         sign_words = []
     
-    return render(request, 'summary.html', {'upload': upload, 'words': sign_words})
+    return render(request, 'summary.html', {
+        'upload': upload, 
+        'words': sign_words, 
+        'summary_data': summary_data
+    })
 
 @login_required(login_url="login")
 def quiz_view(request, session_id):
@@ -87,24 +131,76 @@ def quiz_data_api(request, session_id):
     
     return JsonResponse({'questions': questions})
 
+from datetime import date
+
 @login_required(login_url="login")
 def quiz_submit_view(request, session_id):
-    # This might be handled purely frontend with the JSON data, 
-    # or we can submit to backend to save score.
-    # For this plan, let's just render the results page.
-    # For this plan, let's just render the results page.
-    return render(request, 'quiz_results.html')
+    upload = get_object_or_404(PPTUpload, id=session_id, user=request.user)
+    return render(request, 'quiz_results.html', {'upload': upload})
+
+@login_required(login_url="login")
+def quiz_save_result(request, session_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            upload = get_object_or_404(PPTUpload, id=session_id, user=request.user)
+            
+            # Create Result
+            from .models import QuizResult
+            result = QuizResult.objects.create(
+                user=request.user,
+                upload=upload,
+                score=data.get('score', 0),
+                total=data.get('total', 0),
+                time_taken=data.get('time_taken', '00:00')
+            )
+            
+            # Update Profile
+            user_profile = request.user.userprofile
+            today = date.today()
+            
+            if user_profile.last_activity_date != today:
+                if user_profile.last_activity_date and (today - user_profile.last_activity_date).days == 1:
+                    user_profile.current_streak += 1
+                else:
+                    user_profile.current_streak = 1
+                
+                if user_profile.current_streak > user_profile.longest_streak:
+                    user_profile.longest_streak = user_profile.current_streak
+                
+                user_profile.last_activity_date = today
+            
+            # Add XP (e.g. 10 XP per correct answer)
+            xp_earned = int(data.get('score', 0)) * 10
+            user_profile.total_xp += xp_earned
+            user_profile.save()
+            
+            return JsonResponse({'status': 'success', 'xp_earned': xp_earned})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
 @login_required(login_url="login")
 def animation_view(request):
 	if request.method == 'POST':
 		text = request.POST.get('sen')
 		#tokenizing the sentence
-		text.lower()
 		#tokenizing the sentence
-		words = word_tokenize(text)
+		text = text.lower()
+		#tokenizing the sentence
+		try:
+			words = word_tokenize(text)
+		except LookupError:
+			nltk.download('punkt')
+			nltk.download('punkt_tab')
+			words = word_tokenize(text)
 
-		tagged = nltk.pos_tag(words)
+		try:
+			tagged = nltk.pos_tag(words)
+		except LookupError:
+			nltk.download('averaged_perceptron_tagger')
+			nltk.download('averaged_perceptron_tagger_eng')
+			tagged = nltk.pos_tag(words)
 		tense = {}
 		tense["future"] = len([word for word in tagged if word[1] == "MD"])
 		tense["present"] = len([word for word in tagged if word[1] in ["VBP", "VBZ","VBG"]])
@@ -120,6 +216,12 @@ def animation_view(request):
 
 		#removing stopwords and applying lemmatizing nlp process to words
 		lr = WordNetLemmatizer()
+		try:
+			lr.lemmatize('test')
+		except (LookupError, AttributeError):
+			nltk.download('wordnet')
+			nltk.download('omw-1.4')
+
 		filtered_text = []
 		for w,p in zip(words,tagged):
 			if w not in stop_words:

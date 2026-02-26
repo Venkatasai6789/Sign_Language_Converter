@@ -459,6 +459,25 @@
         const timerEl = document.getElementById('timer');
         const timeTaken = timerEl.textContent;
 
+        // Save to backend
+        try {
+            const csrfToken = '{{ csrf_token }}';
+            await fetch(`{% url 'quiz_save_result' upload.id %}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    score: finalScore,
+                    total: questions.length,
+                    time_taken: timeTaken
+                })
+            });
+        } catch (e) {
+            console.error("Error saving result", e);
+        }
+
         // Redirect to results
         window.location.href = `{% url 'quiz_results' upload.id %}?score=${finalScore}&total=${questions.length}&time=${timeTaken}`;
     }
